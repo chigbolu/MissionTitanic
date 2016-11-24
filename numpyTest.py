@@ -1,13 +1,17 @@
+#Python version required: 2.7
+#https://www.kaggle.com/c/titanic
 import csv as csv
 import numpy as np
 
-
+#Open test data and call next function to skip the first line(header)
 trainData = csv.reader(open('./train2.csv','rb'))
 header = trainData.next();
 
+#Loop through csv rows and add to data 
 data = []
 for row in trainData:
     data.append(row)
+#Convert to numpy array(more efficient than python lists)
 data = np.array(data);
 
 travellingFirstFromS = []
@@ -20,7 +24,6 @@ travellingThirdFromS = []
 travellingThirdFromC = []
 travellingThirdFromQ = []
 
-
 ticketCostsFirstS = []
 ticketCostsSecondS = []
 ticketCostsThirdS = []
@@ -30,10 +33,6 @@ ticketCostsThirdC = []
 ticketCostsFirstQ = []
 ticketCostsSecondQ = []
 ticketCostsThirdQ = []
-
-
-
-
 
 #obtain row of each class(1,2,3) and store them in different arrays
 for row in data:

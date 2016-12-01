@@ -55,20 +55,30 @@ for index,row in df.iterrows():
 #replace null embarkment values 
 
 for index, row in df.iterrows():
-	embark = row['Embarked']
-	if(pd.isnull(embark)):
-		df.set_value(index,'Embarked','C')
+    embark = row['Embarked']
+    if(pd.isnull(embark)):
+        df.set_value(index,'Embarked','C')
 
 
-df.to_csv("trainCompleteAges.csv")
+del df['Name']
+del df['PassengerId']
+del df['Fare']
+del df['Ticket']
+del df['Cabin']
 
+df['Survived'] = df['Survived'].map({1: 'N', 0: 'Y'})
+df.to_csv("trainCompleteAges.csv",index = False)
 
 jvm.start()
-loader = Loader(classname="weka.core.converters.CSVLoader")
 #data = loader.load_file("train2.csv")
 #testData = loader.load_file("test2.csv")
 
-data = converters.load_any_file("train.arff")
+pData = converters.load_any_file("trainCompleteAges.csv")
+
+saver = Saver(classname="weka.core.converters.ArffSaver")
+saver.save_file(pData, "processedData.arff")
+
+data = converters.load_any_file("processedData.arff")
 
 data.class_is_first()   # set class attribute
 cls = Classifier(classname="weka.classifiers.trees.J48", options=["-C", "0.2"])

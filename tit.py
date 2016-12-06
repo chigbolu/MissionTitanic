@@ -14,12 +14,14 @@ from time import time
 import matplotlib.pyplot as plt
 import pandas as pd
 import math as math
+import unicodedata
 
 import weka.core.jvm as jvm
-from weka.classifiers import Classifier, Evaluation
+from weka.classifiers import Classifier, Evaluation, PredictionOutput
 import weka.core.converters as converters
 from weka.core.converters import Loader, Saver
 from weka.core.classes import Random
+import re
 
 
 titlesAverages = dict.fromkeys(['Miss','Dona', 'Lady', 'the Countess','Capt', 'Col', 'Don',
@@ -27,7 +29,7 @@ titlesAverages = dict.fromkeys(['Miss','Dona', 'Lady', 'the Countess','Capt', 'C
 df = pd.read_csv('train.csv', header=0)
 #Calculate averages for each title
 #TODO: Calculate average for no titles(None returned by getTitle)
-for title in titlesAverages: 
+for title in titlesAverages:
     rows = df[df.Name.str.contains(' '+title+'.')]
     average = rows['Age'].mean()
     titlesAverages[title] = int(average)
@@ -52,7 +54,7 @@ for index,row in df.iterrows():
             average = titlesAverages[title]
             df.set_value(index, 'Age', average)
 
-#replace null embarkment values 
+#replace null embarkment values
 
 for index, row in df.iterrows():
     embark = row['Embarked']
@@ -62,7 +64,7 @@ for index, row in df.iterrows():
 
 del df['Name']
 del df['PassengerId']
-del df['Fare']
+#del df['Fare']
 del df['Ticket']
 del df['Cabin']
 
@@ -84,12 +86,30 @@ data.class_is_first()   # set class attribute
 cls = Classifier(classname="weka.classifiers.trees.J48", options=["-C", "0.2"])
 cls.build_classifier(data)
 print(cls)
-
+pout = PredictionOutput(classname="weka.classifiers.evaluation.output.prediction.PlainText")
 evaluation = Evaluation(data)                     # initialize with prior
-evaluation.crossvalidate_model(cls, data, 10, Random(1))  # 10-fold CV
+evaluation.crossvalidate_model(cls, data, 10, Random(1),pout)  # 10-fold CV
 
 print(evaluation.summary())
-print("pctCorrect: " + str(evaluation.percent_correct))
-print("incorrect: " + str(evaluation.incorrect))
-jvm.stop()
 
+#parse output predictions to Survived column
+outputPred = pout.buffer_content()
+predictions = []
+for line in outputPred.split('\n') :
+    m = line.split()
+    if((m is not None) & (len(m) > 1)):
+        predSplit = m[2].split(':')
+        if(len(predSplit) > 1):
+            pred = predSplit[1]
+            #pred is now Y or N
+            #we need to convert it to 1 and 0 and create csv file with column Survived
+            #we also need passengerid column :) 
+
+
+#print("pctCorrect: " + str(evaluation.percent_correct))
+#print("incorrect: " + str(evaluation.incorrect))
+
+
+
+
+jvm.stop()

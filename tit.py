@@ -22,17 +22,53 @@ import weka.core.converters as converters
 from weka.core.converters import Loader, Saver
 from weka.core.classes import Random
 import re
+from weka.filters import Filter, MultiFilter
+from weka.core.classes import OptionHandler, join_options
 
 
 titlesAverages = dict.fromkeys(['Miss','Dona', 'Lady', 'the Countess','Capt', 'Col', 'Don',
-'Dr', 'Major', 'Rev', 'Sir', 'Jonkheer', 'Mr', 'Master', 'Ms', 'Mrs'])
-df = pd.read_csv('train.csv', header=0)
-#Calculate averages for each title
-#TODO: Calculate average for no titles(None returned by getTitle)
-for title in titlesAverages:
+    'Dr', 'Major', 'Rev', 'Sir', 'Jonkheer', 'Mr', 'Master', 'Ms', 'Mrs'])
+
+
+def preprocessing(superfile):
+
+  df = pd.read_csv(superfile, header=0)
+
+  for title in titlesAverages:
     rows = df[df.Name.str.contains(' '+title+'.')]
     average = rows['Age'].mean()
-    titlesAverages[title] = int(average)
+
+    if math.isnan(average):
+      titlesAverages[title] = int(25)
+    else:
+      titlesAverages[title] = int(average)
+
+  for index,row in df.iterrows():
+    age = row['Age']
+    if(math.isnan(age)):
+      title = getTitle(row['Name'])
+      if title in titlesAverages:
+        average = titlesAverages[title]
+        df.set_value(index, 'Age', average)
+      else:
+        df.set_value(index, 'Age', 25)
+
+  for index, row in df.iterrows():
+    embark = row['Embarked']
+    if(pd.isnull(embark)):
+      df.set_value(index,'Embarked','C')
+
+  del df['Name']
+  del df['Fare']
+  del df['Ticket']
+  del df['Cabin']
+  #if 'Survived' in df:
+  return df
+  #else:
+  #  buckets = [0] * len(df)
+  #  df.insert(1,'Survived', buckets)
+  #  return df
+
 
 
 
@@ -42,74 +78,83 @@ def getTitle(name):
             return title
     return 'None'
 
-#Replace empty age column with averages
-for index,row in df.iterrows():
-    age = row['Age']
-    if(math.isnan(age)):
-        title = getTitle(row['Name'])
-        #TODO: Replace age with average for None
-        if title == 'None':
-            continue
-        else:
-            average = titlesAverages[title]
-            df.set_value(index, 'Age', average)
-
-#replace null embarkment values
-
-for index, row in df.iterrows():
-    embark = row['Embarked']
-    if(pd.isnull(embark)):
-        df.set_value(index,'Embarked','C')
-
-
-del df['Name']
-del df['PassengerId']
-#del df['Fare']
-del df['Ticket']
-del df['Cabin']
-
-df['Survived'] = df['Survived'].map({1: 'N', 0: 'Y'})
-df.to_csv("trainCompleteAges.csv",index = False)
-
 jvm.start()
-#data = loader.load_file("train2.csv")
-#testData = loader.load_file("test2.csv")
 
-pData = converters.load_any_file("trainCompleteAges.csv")
+dfOne = preprocessing("train.csv")
+temp = pd.DataFrame({'PassengerId':[]})
+temp['PassengerId'] = dfOne['PassengerId']
+del dfOne['PassengerId']
+dfOne['Survived'] = dfOne['Survived'].map({1: 'Y', 0: 'N'})
+dfOne.to_csv("trainComplete.csv",index = False)
 
+
+dfTwo = preprocessing("test.csv")
+tempTest = pd.DataFrame({'PassengerId':[]})
+tempTest['PassengerId'] = dfTwo['PassengerId']
+del dfTwo['PassengerId']
+#dfTwo['Survived'] = dfTwo['Survived'].map({1: 'Y', 0: 'N'})
+
+dfTwo.to_csv("testComplete.csv",index = False)
+
+pData = converters.load_any_file("trainComplete.csv")
 saver = Saver(classname="weka.core.converters.ArffSaver")
-saver.save_file(pData, "processedData.arff")
+saver.save_file(pData, "processedTrainData.arff")
+data = converters.load_any_file("processedTrainData.arff")
 
-data = converters.load_any_file("processedData.arff")
+multi = MultiFilter()
 
-data.class_is_first()   # set class attribute
+std = Filter(classname="weka.filters.unsupervised.attribute.Standardize")
+#add = Filter(classname='weka.filters.unsupervised.attribute.Add')
+multi.filters = [std]
+multi.inputformat(data)
+data = multi.filter(data)
+#print(data)
+data.class_is_first()  
 cls = Classifier(classname="weka.classifiers.trees.J48", options=["-C", "0.2"])
 cls.build_classifier(data)
 print(cls)
-pout = PredictionOutput(classname="weka.classifiers.evaluation.output.prediction.PlainText")
-evaluation = Evaluation(data)                     # initialize with prior
-evaluation.crossvalidate_model(cls, data, 10, Random(1),pout)  # 10-fold CV
 
+
+testpData = converters.load_any_file("testComplete.csv")
+saver = Saver(classname="weka.core.converters.ArffSaver")
+saver.save_file(testpData, "processedTestData.arff")
+testData = converters.load_any_file("processedTestData.arff")
+#print(testData)
+
+
+#filteredB = multi.filter(testData)
+#print(filteredB)
+filteredB = testData
+filteredB.class_is_first()
+for index, inst in enumerate(filteredB):
+    pred = cls.classify_instance(inst)
+    dist = cls.distribution_for_instance(inst)
+    print(str(index+1) + ": label index=" + str(pred) + ", class distribution=" + str(dist))
+
+pout = PredictionOutput(classname="weka.classifiers.evaluation.output.prediction.PlainText")
+evaluation = Evaluation(data)
+#evaluation.crossvalidate_model(cls, filteredB, 10, Random(42))  # 10-fold CV
+evaluation.test_model(cls, filteredB)
 print(evaluation.summary())
 
-#parse output predictions to Survived column
 outputPred = pout.buffer_content()
 predictions = []
+p = []
 for line in outputPred.split('\n') :
     m = line.split()
     if((m is not None) & (len(m) > 1)):
         predSplit = m[2].split(':')
         if(len(predSplit) > 1):
             pred = predSplit[1]
-            #pred is now Y or N
-            #we need to convert it to 1 and 0 and create csv file with column Survived
-            #we also need passengerid column :) 
+            predictions.append(pred)
+            print pred                
 
+df1 = pd.DataFrame({'PassengerId':[], 'Survived': []})
 
-#print("pctCorrect: " + str(evaluation.percent_correct))
-#print("incorrect: " + str(evaluation.incorrect))
+df1['Survived'] = predictions
+df1['Survived'] = df1['Survived'].map({'Y': 1, 'N': 0})
+df1['PassengerId'] = temp['PassengerId']
 
-
-
+df1.to_csv("results3.csv",index = False)   
 
 jvm.stop()

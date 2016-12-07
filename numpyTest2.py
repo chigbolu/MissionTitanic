@@ -19,6 +19,14 @@ import math as math
 
 titlesAverages = dict.fromkeys(['Miss','Dona', 'Lady', 'the Countess','Capt', 'Col', 'Don',
 'Dr', 'Major', 'Rev', 'Sir', 'Jonkheer', 'Mr', 'Master', 'Ms', 'Mrs'])
+
+rareTitles = dict.fromkeys(['Dona', 'Lady', 'the Countess'])
+rareTitles = dict.fromkeys(['Dona', 'Lady', 'the Countess','Don', 'Sir'])
+rareMan = dict.fromkeys(['Don', 'Sir'])
+rareWom = dict.fromkeys(['Lady','the Countess'])
+
+
+
 df = pd.read_csv('test.csv', header=0)
 #Calculate averages for each title
 #TODO: Calculate average for no titles(None returned by getTitle)
@@ -40,12 +48,14 @@ for index,row in df.iterrows():
     age = row['Age']
     if(math.isnan(age)):
         title = getTitle(row['Name'])
-        #TODO: Replace age with average for None
         if title == 'None':
             continue
         else:
             average = titlesAverages[title]
             df.set_value(index, 'Age', average)
+
+    if age<16:
+      df.set_value(index, 'Sex', 'child')
 
 #replace null embarkment values 
 
@@ -55,31 +65,76 @@ for index, row in df.iterrows():
 		df.set_value(index,'Embarked','C')
 
 
-df.to_csv("trainCompleteAges.csv",index = False)
+df.insert(11,'Title','Mr')
+		
+#add title column
+for index, row in df.iterrows():		
+	title = getTitle(row['Name'])
+	df.set_value(index, 'Title', title)
 
+
+df.to_csv("trainCompleteAges.csv",index = False)
 
 #implementing results(following) of J48 Decision tree classifier run in weka
 
-#model has 7 attributes , replace embarkment with family size
-
 #Sex = male
-#|   Age <= 9
-#|   |   SibSp <= 2
-#|   |   |   Parch <= 0: N (8.19/0.99)
-#|   |   |   Parch > 0: Y (18.21/0.07)
-#|   |   SibSp > 2: N (14.35/1.0)
-#|   Age > 9: N (536.24/88.87)
+#|   Pclass <= 1
+#|   |   SibSp <= 0
+#|   |   |   Age <= 52
+#|   |   |   |   Fare <= 26: N (9.0)
+#|   |   |   |   Fare > 26
+#|   |   |   |   |   Fare <= 27: Y (13.0/2.0)
+#   |   |   |   |   Fare > 27: N (46.0/15.0)
+#|   |   |   Age > 52: N (19.0/2.0)
+#|   |   SibSp > 0
+#|   |   |   Embarked <= 0: N (21.0/8.0)
+#|   |   |   Embarked > 0
+#|   |   |   |   Fare <= 93.5: Y (8.0/2.0)
+#|   |   |   |   Fare > 93.5: N (3.0)
+#|   Pclass > 1: N (418.0/46.0)
 #Sex = female
-#|   Pclass <= 2: Y (170.0/9.0)
+#|   Pclass <= 2: Y (157.0/8.0)
 #|   Pclass > 2
-#|   |   Family_size <= 3: Y (117.0/48.0)
-#|   |   Family_size > 3: N (27.0/3.0)
+#|   |   Fare <= 24.15
+#|   |   |   Embarked <= 1
+#|   |   |   |   Title = Mr: N (0.0)
+#|   |   |   |   Title = Mrs
+#|   |   |   |   |   SibSp <= 0: Y (16.0/5.0)
+#|   |   |   |   |   SibSp > 0
+#|   |   |   |   |   |   Fare <= 15.1: N (5.0)
+#|   |   |   |   |   |   Fare > 15.1
+#|   |   |   |   |   |   |   Age <= 32: N (6.0/2.0)
+#|   |   |   |   |   |   |   Age > 32: Y (5.0)
+#|   |   |   |   Title = Miss
+#|   |   |   |   |   Fare <= 7.925
+#|   |   |   |   |   |   Age <= 27: Y (16.0/5.0)
+#|   |   |   |   |   |   Age > 27: N (3.0)
+#|   |   |   |   |   Fare > 7.925: N (17.0/3.0)
+#|   |   |   |   Title = Master: N (0.0)
+#|   |   |   |   Title = Don: N (0.0)
+#|   |   |   |   Title = Rev: N (0.0)
+#|   |   |   |   Title = Dr: N (0.0)
+#|   |   |   |   Title = None: N (0.0)
+#|   |   |   |   Title = Ms: N (0.0)
+#|   |   |   |   Title = Major: N (0.0)
+#|   |   |   |   Title = Lady: N (0.0)
+#|   |   |   |   Title = Sir: N (0.0)
+#|   |   |   |   Title = Col: N (0.0)
+#|   |   |   |   Title = Capt: N (0.0)
+#|   |   |   |   Title = the Countess: N (0.0)
+#|   |   |   |   Title = Jonkheer: N (0.0)
+#|   |   |   Embarked > 1
+#|   |   |   |   Parch <= 0
+#|   |   |   |   |   Fare <= 7.65: N (2.0)
+#|   |   |   |   |   Fare > 7.65: Y (27.0/4.0)
+#|   |   |   |   Parch > 0: N (2.0)
+#|   |   Fare > 24.15: N (15.0/1.0)
+#Sex = child
+#|   SibSp <= 2: Y (56.0/9.0)
+#|   SibSp > 2: N (27.0/2.0)
 
-
-#implementation in the code, to predict surv and non surv
 
 finalResult = []
-
 
 for index, row in df.iterrows():
 	rowResult = []
@@ -90,43 +145,106 @@ for index, row in df.iterrows():
 	emb = row['Embarked']
 	parCh = int(row ['Parch'])
 	passId = row['PassengerId']
-	familySize = int(row['Family_size'])
+	fare = int(row['Fare'])
+	tit  =row['Title']
 	if(sex == 'male'):
-		if(age <= 9):
-			if(sibSp <= 2):
-				if(parCh == 0):
+		if(pClass<=1):
+			if(sibSp == 0):
+				if(age <= 52):
+					if(fare <= 26):
+						rowResult.append(passId)
+						rowResult.append(0)
+
+					if(fare > 26):
+						if(fare <= 27):
+							rowResult.append(passId)
+							rowResult.append(1)
+						if(fare > 27):
+							rowResult.append(passId)
+							rowResult.append(0)
+
+				if(age > 52):
 					rowResult.append(passId)
 					rowResult.append(0)
-				if(parCh > 0): 
+			if(sibSp > 0):
+				if(emb == 0):
 					rowResult.append(passId)
-					rowResult.append(1)
-			if(sibSp > 2):
-				rowResult.append(passId)
-				rowResult.append(0)
-
-		if(age > 9):     #this condition could be improved
- 			rowResult.append(passId)
+					rowResult.append(0)
+				if(emb > 0):
+					if(fare <= 93.5):
+						rowResult.append(passId)
+						rowResult.append(0)
+					if(fare > 93.5):
+						rowResult.append(passId)
+						rowResult.append(1)
+		if(pClass > 1):
+			rowResult.append(passId)
 			rowResult.append(0)
 	if(sex == 'female'):
 		if(pClass <= 2):
 			rowResult.append(passId)
 			rowResult.append(1)
-
-		if(pClass > 2):	
-			if(familySize <= 3):
-				rowResult.append(passId)
-				rowResult.append(1)
-			if(familySize > 3):
+		if(pClass > 2):
+			if(fare <= 24.15):
+				if(emb <= 1):
+					if(tit == 'Mrs'):
+						if(sibSp == 0):
+							rowResult.append(passId)
+							rowResult.append(1)
+						if(sibSp > 0):
+							if(fare <= 15.1):
+								rowResult.append(passId)
+								rowResult.append(0)
+							if(fare > 15.1):
+								if(age <= 32):
+									rowResult.append(passId)
+									rowResult.append(0)
+								if(age > 32):
+									rowResult.append(passId)
+									rowResult.append(1)
+					if(tit == 'Miss'):
+						if(fare < 7.925):
+							if(age <= 27):
+								rowResult.append(passId)
+								rowResult.append(1)
+							if(age > 27):
+								rowResult.append(passId)
+								rowResult.append(0)
+						if(fare > 7.925):
+							rowResult.append(passId)
+							rowResult.append(0)
+				
+				if(emb > 1):
+					if(parCh == 0):
+						if(fare <= 7.65):
+							rowResult.append(passId)
+							rowResult.append(0)
+						if(fare > 7.65):
+							rowResult.append(passId)
+							rowResult.append(1)
+					if(parCh > 0):
+						rowResult.append(passId)
+						rowResult.append(0)
+			if(fare > 24.15):
 				rowResult.append(passId)
 				rowResult.append(0)
-
+	if(sex == 'child'):
+		if(sibSp <= 2):
+			rowResult.append(passId)
+			rowResult.append(1)
+		if(sibSp > 2):
+			rowResult.append(passId)
+			rowResult.append(0)
+					
 	finalResult.append(rowResult)
+
+
 
 #for row in finalResult:
 #	print(row)
 
-count = 0
-ind = 0
+#count = 0
+#ind = 0
 
 #loop to check the results in the training test
 #for index,row in df.iterrows():
@@ -141,6 +259,8 @@ ind = 0
 
 finalFile = np.asarray(finalResult)
 np.savetxt("testResults.csv",finalFile,delimiter = ",")
+
+
 				
 
 

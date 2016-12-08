@@ -83,7 +83,7 @@ def processTrainAndTestStuff(df):
         df.set_value(index, 'Family_size',famSize)
         title = getTitle(row['Name'])
         df.set_value(index, 'Title', title)
-    df1['Embarked'] = df1['Embarked'].map({'S':0, 'C':1, 'Q':2})
+    df['Embarked'] = df['Embarked'].map({'S':0, 'C':1, 'Q':2})
 
     return df   
 
@@ -179,27 +179,13 @@ def runModel():
     dfTrain = processTrainAndTestStuff(dfTrain)
     dfTest = processTrainAndTestStuff(dfTest)
     print(dfTest)
-    dfTrain['Survived'] = dfTrain['Survived'].astype(float)
     print(dfTrain)
 
-    X_train = dfTrain.drop("Survived",axis=1)
-    Y_train = dfTrain["Survived"]
-    X_test  = dfTest.drop("PassengerId",axis=1).copy()
-
-    random_forest = RandomForestClassifier(n_estimators=100)
-    random_forest.fit(X_train, Y_train)
-    Y_pred = random_forest.predict(X_test)
-    random_forest.score(X_train, Y_train)
-    submission = pd.DataFrame({
-        "PassengerId": dfTest["PassengerId"],
-        "Survived": Y_pred
-    })
-
     finalResult = decisionTree(dfTest)
+
     dfFinal = pd.DataFrame(finalResult, columns = list('ps'))
     dfFinal.rename(columns={'p':'PassengerId'}, inplace=True)
     dfFinal.rename(columns={'s':'Survived'}, inplace=True)
-    submission.to_csv("res.csv", index=False)
     dfFinal.to_csv("results.csv",index = False)
 
 runModel()

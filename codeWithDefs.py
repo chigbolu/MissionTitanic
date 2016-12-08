@@ -9,6 +9,8 @@ import csv as csv
 import numpy as np
 import pandas as pd
 import math as math
+from sklearn.ensemble import RandomForestClassifier
+
 
 titlesAverages = dict.fromkeys(['Miss','Dona', 'Lady', 'the Countess','Capt', 'Col', 'Don',
 'Dr', 'Major', 'Rev', 'Sir', 'Jonkheer', 'Mr', 'Master', 'Ms', 'Mrs'])
@@ -53,7 +55,8 @@ def processTrainAndTestStuff(df):
     for index, row in df.iterrows():
         embark = row['Embarked']
         if(pd.isnull(embark)):
-            df.set_value(index,'Embarked','C')      
+            df.set_value(index,'Embarked','C')
+
         age = row['Age']
         if(math.isnan(age)):
             title = getTitle(row['Name'])
@@ -61,8 +64,8 @@ def processTrainAndTestStuff(df):
                 average = titlesAverages[title]
                 df.set_value(index, 'Age', average)
 
-        #if age<16:
-        #    df.set_value(index, 'Sex', 'child')
+        if age<16:
+            df.set_value(index, 'Sex', 'child')
         fare = row['Fare'] 
         if(math.isnan(fare)):
             df.set_value(index, 'Fare', 25)
@@ -80,6 +83,7 @@ def processTrainAndTestStuff(df):
         df.set_value(index, 'Family_size',famSize)
         title = getTitle(row['Name'])
         df.set_value(index, 'Title', title)
+    df1['Embarked'] = df1['Embarked'].map({'S':0, 'C':1, 'Q':2})
 
     return df   
 
@@ -118,7 +122,7 @@ def decisionTree(df):
                 rowResult.append(passId)
                 rowResult.append(1)
             if(pClass > 2):
-                if(emb == 'S'):
+                if(emb == 0):
                     if(sibSp <= 1):
                         if(sibSp<=0):
                             rowResult.append(passId)
@@ -145,17 +149,24 @@ def decisionTree(df):
                     if(sibSp>1):             
                         rowResult.append(passId)
                         rowResult.append(0)
-                if(emb == 'C'):
+                if(emb == 1):
                     rowResult.append(passId)
                     rowResult.append(1)
-                if(emb == 'Q'):
+                if(emb == 2):
                     if(parCh<=0):
                         rowResult.append(passId)
                         rowResult.append(1) 
                     else:
                         rowResult.append(passId)
                         rowResult.append(0)
-                        
+        elif(sex == 'child'):
+            if (sibSp <= 2):
+                rowResult.append(passId)
+                rowResult.append(1)
+            if (sibSp > 2):
+                rowResult.append(passId)
+                rowResult.append(0)
+                     
         finalResult.append(rowResult)
     return finalResult
 
@@ -170,10 +181,25 @@ def runModel():
     print(dfTest)
     dfTrain['Survived'] = dfTrain['Survived'].astype(float)
     print(dfTrain)
+
+    X_train = dfTrain.drop("Survived",axis=1)
+    Y_train = dfTrain["Survived"]
+    X_test  = dfTest.drop("PassengerId",axis=1).copy()
+
+    random_forest = RandomForestClassifier(n_estimators=100)
+    random_forest.fit(X_train, Y_train)
+    Y_pred = random_forest.predict(X_test)
+    random_forest.score(X_train, Y_train)
+    submission = pd.DataFrame({
+        "PassengerId": dfTest["PassengerId"],
+        "Survived": Y_pred
+    })
+
     finalResult = decisionTree(dfTest)
     dfFinal = pd.DataFrame(finalResult, columns = list('ps'))
     dfFinal.rename(columns={'p':'PassengerId'}, inplace=True)
     dfFinal.rename(columns={'s':'Survived'}, inplace=True)
+    submission.to_csv("res.csv", index=False)
     dfFinal.to_csv("results.csv",index = False)
 
-runModel()     
+runModel()

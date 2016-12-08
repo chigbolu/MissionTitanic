@@ -27,7 +27,8 @@ rareWom = dict.fromkeys(['Lady','the Countess'])
 
 
 
-df = pd.read_csv('test.csv', header=0)
+df = pd.read_csv('train.csv', header=0)
+dfTest = pd.read_csv('test.csv', header=0)
 #Calculate averages for each title
 #TODO: Calculate average for no titles(None returned by getTitle)
 for title in titlesAverages: 
@@ -66,6 +67,8 @@ for index, row in df.iterrows():
 
 
 df.insert(11,'Title','Mr')
+
+df.insert(12, 'Family_size', 0)
 		
 #add title column
 for index, row in df.iterrows():		
@@ -73,7 +76,29 @@ for index, row in df.iterrows():
 	df.set_value(index, 'Title', title)
 
 
-df.to_csv("trainCompleteAges.csv",index = False)
+		
+	parCh = int(row ['Parch'])
+	sibSp = int(row['SibSp'])
+	famSize = parCh + sibSp
+	if(famSize == 0):
+		famSize = 2;	
+	elif(famSize <= 3):
+		famSize = 0;
+	else:
+		famSize = 1;
+	df.set_value(index, 'Family_size',famSize)
+
+
+df['Survived'] = df['Survived'].map({1: 'Y', 0: 'N'})
+
+# file to run in weka ONLY FOR TRAIN DATA
+# TO REMOVE WHEN RUNNING TEST DATA
+
+df.to_csv("trainWeka.csv",index = False)
+
+
+
+
 
 #implementing results(following) of J48 Decision tree classifier run in weka
 
@@ -147,6 +172,9 @@ for index, row in df.iterrows():
 	passId = row['PassengerId']
 	fare = int(row['Fare'])
 	tit  =row['Title']
+
+	#if():
+
 	if(sex == 'male'):
 		if(pClass<=1):
 			if(sibSp == 0):
@@ -257,9 +285,47 @@ for index, row in df.iterrows():
 
 #print "The accuracy of J48 is:", float(count)/float(len(finalResult))
 
-finalFile = np.asarray(finalResult)
-np.savetxt("testResults.csv",finalFile,delimiter = ",")
 
+
+
+#finalFile = np.asarray(finalResult)	
+#np.savetxt("testResults.csv",finalFile,delimiter = ",")
+
+def getSurname(name):
+    nameSplit = name.split(',')
+    return nameSplit[0]
+surnames = dict()
+for index, row in df.iterrows():
+    #add title column
+	title = getTitle(row['Name'])
+	df.set_value(index, 'Title', title)
+
+	surname = getSurname(row['Name'])
+	survived = row['Survived']
+	surnames[surname] = survived
+
+dfFinal = pd.DataFrame(finalResult, columns = list('ps'))
+#print(dfFinal)
+
+
+count = 0
+for index, row in dfTest.iterrows():
+	surname = getSurname(row['Name'])
+    	if(surname in surnames):
+        	survived = surnames[surname]
+        	passId = row['PassengerId']
+        	#finalRow = dfFinal[dfFinal['PassengerId'] == passId]
+        	for index2, row2 in dfFinal.iterrows():
+			print(row2)
+            		if(passId == row2['p']):
+                		dfFinal.set_value(index2, 's', survived)
+				count += 1
+
+
+#print(dfFinal)
+
+print(count)
+dfFinal.to_csv("testResults.csv",index = False)
 
 				
 

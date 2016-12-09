@@ -152,6 +152,8 @@ def runModel():
     del dfTrain['Name']
     del dfTrain['PassengerId']
     del dfTrain['Title']
+    del dfTrain['Ticket']
+    del dfTrain['Fare']
     dfTrain.to_csv("train2.csv",index = False)
 
     finalResult = decisionTree(dfTest)

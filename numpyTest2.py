@@ -27,7 +27,7 @@ rareWom = dict.fromkeys(['Lady','the Countess'])
 
 
 
-df = pd.read_csv('train.csv', header=0)
+df = pd.read_csv('test.csv', header=0)
 #dfTest = pd.read_csv('test.csv', header=0)
 #Calculate averages for each title
 #TODO: Calculate average for no titles(None returned by getTitle)
@@ -116,8 +116,8 @@ for index, row in df.iterrows():
 
 #only when running train data  ---------------------
 
-df.loc[df.Survived == 0, 'Survived'] = 'N'
-df.loc[df.Survived == 1,'Survived' ] = 'Y'
+#df.loc[df.Survived == 0, 'Survived'] = 'N'
+#df.loc[df.Survived == 1,'Survived' ] = 'Y'
 
 df.loc[df.Sex == 'male', 'Sex'] = 0
 df.loc[df.Sex == 'female', 'Sex'] = 1
@@ -147,19 +147,17 @@ for index, row in df.iterrows():
 	passId = row['PassengerId']
 	familySize = int(row['Family_size'])
 	if(sex == 0):
-		if(age <= 9):
-			if(sibSp <= 2):
-				if(parCh == 0):
-					rowResult.append(passId)
-					rowResult.append(0)
-				if(parCh > 0): 
-					rowResult.append(passId)
-					rowResult.append(1)
-			if(sibSp > 2):
+		if(age <= 13):
+			if (sibSp <= 2):
+				rowResult.append(passId)
+				rowResult.append(1)
+
+
+			if (sibSp > 2):
 				rowResult.append(passId)
 				rowResult.append(0)
 
-		if(age > 9):     #this condition could be improved
+		if(age > 13):     
  			rowResult.append(passId)
 			rowResult.append(0)
 	if(sex > 0):
@@ -168,12 +166,21 @@ for index, row in df.iterrows():
 			rowResult.append(1)
 
 		if(pClass > 2):	
-			if(familySize <= 3):
-				rowResult.append(passId)
-				rowResult.append(1)
-			if(familySize > 3):
+			if(emb <= 0):
 				rowResult.append(passId)
 				rowResult.append(0)
+			if(emb > 0):
+				if(parCh <= 0):
+					rowResult.append(passId)
+					rowResult.append(1)
+
+				if(parCh > 0):
+					if(emb <= 1):
+						rowResult.append(passId)
+						rowResult.append(1)
+					if(emb > 1):
+						rowResult.append(passId)
+						rowResult.append(0)
 
 	finalResult.append(rowResult)
 

@@ -139,7 +139,6 @@ finalResult = []
 for index, row in df.iterrows():
 	rowResult = []
 	sex = row['Sex']
-	title = row['Title']
 	sibSp = int(row['SibSp'])
 	age = float(row['Age'])
 	pClass = int(row['Pclass'])
@@ -147,33 +146,21 @@ for index, row in df.iterrows():
 	parCh = int(row ['Parch'])
 	passId = row['PassengerId']
 	familySize = int(row['Family_size'])
-	fare = float(row['Fare'])
 	if(sex == 0):
-		if(title == 'Mr'):
-			if(age <= 9):
-				if(sibSp <= 2):
-					if(parCh == 0):
-						rowResult.append(passId)
-						rowResult.append(0)
-					if(parCh > 0): 
-						rowResult.append(passId)
-						rowResult.append(1)
-				if(sibSp > 2):
+		if(age <= 9):
+			if(sibSp <= 2):
+				if(parCh == 0):
 					rowResult.append(passId)
 					rowResult.append(0)
+				if(parCh > 0): 
+					rowResult.append(passId)
+					rowResult.append(1)
+			if(sibSp > 2):
+				rowResult.append(passId)
+				rowResult.append(0)
 
-			if(age > 9):     #this condition could be improved
-	 			rowResult.append(passId)
-				rowResult.append(0)
-		else if(title == 'Master):
-			if(familySize <= 0):
-				rowResult.append(passId)
-				rowResult.append(1)
-			else:
-				rowResult.append(passId)
-				rowResult.append(0)
-		else:
-			rowResult.append(passId)
+		if(age > 9):     #this condition could be improved
+ 			rowResult.append(passId)
 			rowResult.append(0)
 	if(sex > 0):
 		if(pClass <= 2):
@@ -181,27 +168,9 @@ for index, row in df.iterrows():
 			rowResult.append(1)
 
 		if(pClass > 2):	
-			if(fare <= 23.25):
-				if(emb <= 0):
-					if(title == 'Mrs'):
-						if(sibSp <= 0):
-							if(fare <= 18)
-								rowResult.append(passId)
-								rowResult.append(1)
-							else:
-								rowResult.append(passId)
-								rowResult.append(0)
-						else:
-							if(fare <= 15.1):
-								rowResult.append(passId)
-								rowResult.append(0)
-							else:
-								if(age <= 32):
-									rowResult.append(passId)
-									rowResult.append(0)
-								else:
-									rowResult.append(passId)
-									rowResult.append(1)
+			if(familySize <= 3):
+				rowResult.append(passId)
+				rowResult.append(1)
 			if(familySize > 3):
 				rowResult.append(passId)
 				rowResult.append(0)
